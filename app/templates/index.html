@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WorldTrace AI — Capture Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <p class="brand-name">WorldTrace AI</p>
+        <p class="brand-tag">Auditable transfer capture · OpenCV research prototype</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-panel="studio" role="tab">Capture Studio</button>
+      <button class="tab" data-panel="ledger" role="tab">Dataset Ledger</button>
+      <button class="tab" data-panel="architecture" role="tab">Architecture</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="panel-studio" class="panel active">
+      <div class="studio-layout">
+        <aside class="control-rail">
+          <h2>Capture inputs</h2>
+          <p class="muted">Generate deterministic synthetic transfers or upload a short video of a green object moving source → destination.</p>
+
+          <div class="control-block">
+            <h3>Synthetic scenarios</h3>
+            <div class="btn-stack">
+              <button id="btn-successful" class="btn primary">Run successful transfer</button>
+              <button id="btn-incomplete" class="btn">Run incomplete transfer</button>
+              <button id="btn-occluded" class="btn">Run occluded transfer</button>
+            </div>
+          </div>
+
+          <div class="control-block">
+            <h3>Upload video</h3>
+            <input type="file" id="file-input" accept="video/mp4,video/avi,video/quicktime,video/x-matroska,.mp4,.avi,.mov,.mkv" />
+            <button id="btn-upload" class="btn">Upload &amp; process</button>
+          </div>
+
+          <div class="control-block">
+            <h3>Webcam (optional)</h3>
+            <video id="webcam" autoplay playsinline muted></video>
+            <div class="btn-row">
+              <button id="btn-webcam-start" class="btn">Start webcam</button>
+              <button id="btn-webcam-record" class="btn" disabled>Record 4s &amp; process</button>
+              <button id="btn-webcam-stop" class="btn ghost" disabled>Stop</button>
+            </div>
+            <p class="hint">Requires browser camera permission. Unsupported browsers keep upload/synthetic paths available.</p>
+          </div>
+
+          <div class="control-block">
+            <h3>Human review</h3>
+            <p id="review-hint" class="muted">Process an episode with REVIEW_REQUIRED to enable controls.</p>
+            <div class="btn-row">
+              <button id="btn-approve" class="btn approve" disabled>Approve</button>
+              <button id="btn-reject" class="btn reject" disabled>Reject</button>
+              <button id="btn-download" class="btn" disabled>Download evidence ZIP</button>
+            </div>
+          </div>
+        </aside>
+
+        <section class="stage">
+          <div class="status-bar">
+            <span id="status-text">Ready</span>
+            <span id="opencv-badge" class="badge">OpenCV …</span>
+          </div>
+
+          <div class="video-grid">
+            <figure>
+              <figcaption>Original</figcaption>
+              <video id="video-original" controls></video>
+            </figure>
+            <figure>
+              <figcaption>Annotated</figcaption>
+              <video id="video-annotated" controls></video>
+            </figure>
+          </div>
+
+          <div class="insight-grid">
+            <article class="insight">
+              <h3>Recommendation</h3>
+              <p id="decision-action" class="decision">—</p>
+              <p id="decision-reason" class="muted"></p>
+              <p id="decision-summary"></p>
+            </article>
+            <article class="insight">
+              <h3>Evidence summary</h3>
+              <ul id="evidence-list" class="evidence-list"></ul>
+              <p>Quality score: <strong id="quality-score">—</strong></p>
+              <p class="hint">Heuristic formula (not a probability) is shown in Architecture / config.</p>
+            </article>
+            <article class="insight">
+              <h3>Trajectory</h3>
+              <canvas id="traj-canvas" width="420" height="200" aria-label="Normalized trajectory"></canvas>
+            </article>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="panel-ledger" class="panel">
+      <div class="ledger-head">
+        <h2>Dataset Ledger</h2>
+        <button id="btn-refresh-ledger" class="btn">Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table id="ledger-table">
+          <thead>
+            <tr>
+              <th>Episode</th>
+              <th>Timestamp</th>
+              <th>Scenario</th>
+              <th>Decision</th>
+              <th>Review</th>
+              <th>Quality</th>
+              <th>Tracked</th>
+              <th>Export</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <article id="ledger-detail" class="ledger-detail hidden">
+        <h3>Episode detail</h3>
+        <pre id="ledger-detail-body"></pre>
+      </article>
+    </section>
+
+    <section id="panel-architecture" class="panel">
+      <h2>Architecture</h2>
+      <p class="muted">Perception → evidence → decision → human gate → export. AWS S3 is optional and unverified unless configured.</p>
+      <div class="arch-flow" aria-label="Architecture diagram">
+        <div class="arch-node">Video input<br /><small>upload / webcam / synthetic</small></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">OpenCV perception<br /><small>HSV · morphology · contours</small></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">Evidence extraction<br /><small>zones · trajectory · CSV</small></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">Decision engine<br /><small>REVIEW / RETAKE</small></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">Human-review gate<br /><small>approve / reject</small></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">Evidence export<br /><small>ZIP bundle</small></div>
+      </div>
+      <div class="arch-optional">
+        <strong>Optional:</strong> AWS S3 archival adapter — <em>not enabled / not tested</em> in the default local build.
+      </div>
+      <pre class="formula-box" id="formula-box"></pre>
+    </section>
+  </main>
+
+  <footer>
+    <p>WorldTrace AI research prototype · local filesystem storage · no external AI services</p>
+  </footer>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

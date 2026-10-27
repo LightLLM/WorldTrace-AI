@@ -1,0 +1,12 @@
+services:
+  worldtrace:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/episodes:/app/data/episodes
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - AWS_S3_ENABLED=false
+    # AWS credentials are intentionally omitted. Optional S3 archival is unverified.
